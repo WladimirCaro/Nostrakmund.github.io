@@ -79,9 +79,9 @@
             border-radius: 5px;
         }
         .chart-container {
-            display: none;
             width: 100%;
             margin-top: 30px;
+            display: none;
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -117,11 +117,9 @@
                     <th>Monto Final</th>
                     <th>Multiplicador</th>
                     <th>Ganancia/Pérdida</th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
-            <tbody>
-                <!-- Aquí se agregarán las filas dinámicamente -->
-            </tbody>
         </table>
 
         <div class="kick-message">
@@ -129,7 +127,7 @@
             <button id="copy-button" onclick="copiarMensaje()">Copiar Mensaje</button>
         </div>
 
-        <button onclick="mostrarGrafico()">Mostrar Gráfico de Ganancias/Pérdidas</button>
+        <button onclick="toggleGrafico()">Mostrar/Ocultar Gráfico de Ganancias/Pérdidas</button>
         <div class="chart-container">
             <canvas id="myChart"></canvas>
         </div>
@@ -138,6 +136,7 @@
     <script>
         var totalGanancia = 0;
         var totalPerdida = 0;
+        var chart;  // Referencia al gráfico
 
         function calcular() {
             var slotName = document.getElementById('slot-name').value;
@@ -167,53 +166,55 @@
             var celdaMontoFinal = nuevaFila.insertCell(2);
             var celdaMultiplicador = nuevaFila.insertCell(3);
             var celdaGananciaPerdida = nuevaFila.insertCell(4);
+            var celdaAcciones = nuevaFila.insertCell(5);
 
             celdaSlotName.textContent = slotName;
             celdaMontoInicial.textContent = montoInicial.toFixed(2);
             celdaMontoFinal.textContent = montoFinal.toFixed(2);
             celdaMultiplicador.textContent = multiplicador.toFixed(2);
-            celdaGananciaPerdida.textContent = ganancia >= 0 ? 'Ganancia: ' + ganancia.toFixed(2) : 'Pérdida: ' + Math.abs(ganancia).toFixed(2);
+            celdaGananciaPerdida.textContent = ganancia >= 0 ? '+' + ganancia.toFixed(2) : ganancia.toFixed(2);
 
-            // Sumar las ganancias o pérdidas totales
-            if (ganancia >= 0) {
-                totalGanancia += ganancia;
-            } else {
-                totalPerdida += Math.abs(ganancia);
-            }
-
-            // Permitir editar las celdas
-            for (let i = 0; i < nuevaFila.cells.length; i++) {
-                nuevaFila.cells[i].setAttribute('contenteditable', 'true');
-            }
-
-            // Generar mensaje para copiar en la plataforma de kick
-            var kickMessage = slotName + ": Entraste con: " + montoInicial.toFixed(2) + " // Saliste con: " + montoFinal.toFixed(2) + " // Multiplicador: " + multiplicador.toFixed(2) + " // " + (ganancia >= 0 ? "Ganancia: " + ganancia.toFixed(2) : "Pérdida: " + Math.abs(ganancia).toFixed(2));
-
-            document.getElementById('kick-output').textContent = kickMessage;
+            // Botón para eliminar fila
+            var botonEliminar = document.createElement('button');
+            botonEliminar.textContent = 'Eliminar';
+            botonEliminar.onclick = function() {
+                tablaHistorial.deleteRow(nuevaFila.rowIndex - 1);
+            };
+            celdaAcciones.appendChild(botonEliminar);
         }
 
-        function mostrarGrafico() {
-            // Mostrar contenedor de gráfico
-            document.querySelector('.chart-container').style.display = 'block';
+        function toggleGrafico() {
+            var chartContainer = document.querySelector('.chart-container');
+            if (chartContainer.style.display === 'none') {
+                chartContainer.style.display = 'block';
+                generarGrafico();
+            } else {
+                chartContainer.style.display = 'none';
+            }
+        }
 
-            // Crear gráfico de torta
+        function generarGrafico() {
             var ctx = document.getElementById('myChart').getContext('2d');
-            var chart = new Chart(ctx, {
-                type: 'pie',
+
+            if (chart) {
+                chart.destroy();  // Destruir el gráfico anterior si existe
+            }
+
+            chart = new Chart(ctx, {
+                type: 'bar',
                 data: {
-                    labels: ['Ganancia Total', 'Pérdida Total'],
+                    labels: ['Ganancias', 'Pérdidas'],
                     datasets: [{
-                        label: 'Ganancias y Pérdidas Totales',
+                        label: 'Total',
                         data: [totalGanancia, totalPerdida],
-                        backgroundColor: ['#00ff00', '#ff0000'],
+                        backgroundColor: ['#00FF00', '#FF0000']
                     }]
                 },
                 options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                        },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
                     }
                 }
             });
@@ -223,9 +224,10 @@
             var mensaje = document.getElementById('kick-output').textContent;
             navigator.clipboard.writeText(mensaje).then(function() {
                 alert('Mensaje copiado al portapapeles');
+            }, function(err) {
+                alert('Error al copiar el mensaje');
             });
         }
     </script>
 </body>
 </html>
-
