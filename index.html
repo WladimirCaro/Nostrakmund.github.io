@@ -78,7 +78,13 @@
             border: 1px solid #ced4da;
             border-radius: 5px;
         }
+        .chart-container {
+            display: none;
+            width: 100%;
+            margin-top: 30px;
+        }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="container">
@@ -122,9 +128,17 @@
             <p id="kick-output"></p>
             <button id="copy-button" onclick="copiarMensaje()">Copiar Mensaje</button>
         </div>
+
+        <button onclick="mostrarGrafico()">Mostrar Gráfico de Ganancias/Pérdidas</button>
+        <div class="chart-container">
+            <canvas id="myChart"></canvas>
+        </div>
     </div>
 
     <script>
+        var totalGanancia = 0;
+        var totalPerdida = 0;
+
         function calcular() {
             var slotName = document.getElementById('slot-name').value;
             var montoInicial = parseFloat(document.getElementById('monto-inicial').value);
@@ -160,6 +174,13 @@
             celdaMultiplicador.textContent = multiplicador.toFixed(2);
             celdaGananciaPerdida.textContent = ganancia >= 0 ? 'Ganancia: ' + ganancia.toFixed(2) : 'Pérdida: ' + Math.abs(ganancia).toFixed(2);
 
+            // Sumar las ganancias o pérdidas totales
+            if (ganancia >= 0) {
+                totalGanancia += ganancia;
+            } else {
+                totalPerdida += Math.abs(ganancia);
+            }
+
             // Permitir editar las celdas
             for (let i = 0; i < nuevaFila.cells.length; i++) {
                 nuevaFila.cells[i].setAttribute('contenteditable', 'true');
@@ -171,16 +192,40 @@
             document.getElementById('kick-output').textContent = kickMessage;
         }
 
+        function mostrarGrafico() {
+            // Mostrar contenedor de gráfico
+            document.querySelector('.chart-container').style.display = 'block';
+
+            // Crear gráfico de torta
+            var ctx = document.getElementById('myChart').getContext('2d');
+            var chart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['Ganancia Total', 'Pérdida Total'],
+                    datasets: [{
+                        label: 'Ganancias y Pérdidas Totales',
+                        data: [totalGanancia, totalPerdida],
+                        backgroundColor: ['#00ff00', '#ff0000'],
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                    }
+                }
+            });
+        }
+
         function copiarMensaje() {
             var mensaje = document.getElementById('kick-output').textContent;
-            var areaTemporal = document.createElement('textarea');
-            areaTemporal.value = mensaje;
-            document.body.appendChild(areaTemporal);
-            areaTemporal.select();
-            document.execCommand('copy');
-            document.body.removeChild(areaTemporal);
-            alert('Mensaje copiado al portapapeles');
+            navigator.clipboard.writeText(mensaje).then(function() {
+                alert('Mensaje copiado al portapapeles');
+            });
         }
     </script>
 </body>
 </html>
+
