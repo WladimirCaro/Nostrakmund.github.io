@@ -19,7 +19,8 @@
             background-color: rgba(255, 255, 255, 0.1);
             padding: 20px;
             border-radius: 10px;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+            border: 2px solid #ffcc00; /* Borde dorado */
         }
         label {
             display: block;
@@ -37,18 +38,21 @@
         }
         button {
             padding: 10px 15px;
-            background-color: #00aaff;
-            color: white;
+            background-color: #ffcc00; /* Botón dorado */
+            color: #1f1f3a;
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            transition: background-color 0.3s ease;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
         }
         button:hover {
-            background-color: #0077cc;
+            background-color: #ffb300; /* Botón dorado más oscuro */
+            transform: scale(1.05); /* Efecto de crecimiento */
         }
         h1 {
             text-align: center;
+            color: #ffcc00; /* Color dorado para el título */
         }
         .result p {
             font-size: 18px;
@@ -57,19 +61,17 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
-            background-color: rgba(255, 255, 255, 0.1);
+            background-color: rgba(255, 255, 255, 0.2); /* Fondo más claro para la tabla */
         }
         th, td {
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            padding: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            padding: 10px;
             text-align: left;
             color: white;
         }
         th {
-            background-color: #007bff;
-        }
-        td {
-            cursor: pointer;
+            background-color: #007bff; /* Color azul para el encabezado */
+            text-shadow: 1px 1px 5px rgba(0, 0, 0, 0.3);
         }
         .kick-message {
             margin-top: 20px;
@@ -78,13 +80,38 @@
             border: 1px solid #ced4da;
             border-radius: 5px;
         }
+        .summary-button {
+            background-color: #ffcc00; /* Botón dorado */
+            padding: 10px 20px;
+            margin: 20px 0;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: block;
+            width: 100%;
+        }
+        .summary-button:hover {
+            animation: pulse 1s infinite; /* Animación de pulsar */
+        }
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
         .chart-container {
             width: 100%;
             margin-top: 30px;
             display: none;
         }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="container">
@@ -130,16 +157,16 @@
             <button id="copy-button" onclick="copiarMensaje()">Copiar Mensaje</button>
         </div>
 
-        <button onclick="toggleGrafico()">Mostrar/Ocultar Gráfico de Ganancias/Pérdidas</button>
-        <div class="chart-container">
-            <canvas id="myChart"></canvas>
+        <button class="summary-button" onclick="mostrarResumen()">Mostrar Resumen de Ganancias/Pérdidas</button>
+        <div id="resumen" style="display: none;">
+            <h2>Resumen de Ganancias/Pérdidas</h2>
+            <p id="resumen-total"></p>
         </div>
     </div>
 
     <script>
-        var totalGanancia = 0;
-        var totalPerdida = 0;
-        var chart;  // Referencia al gráfico
+        let totalGanancias = 0;
+        let totalPerdidas = 0;
 
         function calcular() {
             var slotName = document.getElementById('slot-name').value;
@@ -175,62 +202,38 @@
             celdaMontoInicial.textContent = montoInicial.toFixed(2);
             celdaMontoFinal.textContent = montoFinal.toFixed(2);
             celdaMultiplicador.textContent = multiplicador.toFixed(2);
-            celdaGananciaPerdida.textContent = ganancia >= 0 ? '+' + ganancia.toFixed(2) : ganancia.toFixed(2);
+            celdaGananciaPerdida.textContent = ganancia >= 0 ? 'Ganancia: ' + ganancia.toFixed(2) : 'Pérdida: ' + Math.abs(ganancia).toFixed(2);
 
-            // Botón para eliminar fila
-            var botonEliminar = document.createElement('button');
-            botonEliminar.textContent = 'Eliminar';
-            botonEliminar.onclick = function() {
-                tablaHistorial.deleteRow(nuevaFila.rowIndex - 1);
-            };
-            celdaAcciones.appendChild(botonEliminar);
-        }
-
-        function toggleGrafico() {
-            var chartContainer = document.querySelector('.chart-container');
-            if (chartContainer.style.display === 'none') {
-                chartContainer.style.display = 'block';
-                generarGrafico();
+            // Actualizar totales
+            if (ganancia >= 0) {
+                totalGanancias += ganancia;
             } else {
-                chartContainer.style.display = 'none';
-            }
-        }
-
-        function generarGrafico() {
-            var ctx = document.getElementById('myChart').getContext('2d');
-
-            if (chart) {
-                chart.destroy();  // Destruir el gráfico anterior si existe
+                totalPerdidas += Math.abs(ganancia);
             }
 
-            chart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['Ganancias', 'Pérdidas'],
-                    datasets: [{
-                        label: 'Total',
-                        data: [totalGanancia, totalPerdida],
-                        backgroundColor: ['#00FF00', '#FF0000']
-                    }]
-                },
-                options: {
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                }
-            });
+            // Mensaje de "kick"
+            document.getElementById('kick-output').textContent = `${slotName}: Entraste con: ${montoInicial.toFixed(2)} // Saliste con: ${montoFinal.toFixed(2)} // Multiplicador: ${multiplicador.toFixed(2)} // Ganancia o pérdida: ${ganancia >= 0 ? ganancia.toFixed(2) : Math.abs(ganancia).toFixed(2)}`;
+
+            // Limpiar campos
+            document.getElementById('slot-name').value = '';
+            document.getElementById('monto-inicial').value = '';
+            document.getElementById('monto-final').value = '';
         }
 
         function copiarMensaje() {
-            var mensaje = document.getElementById('kick-output').textContent;
-            navigator.clipboard.writeText(mensaje).then(function() {
-                alert('Mensaje copiado al portapapeles');
-            }, function(err) {
-                alert('Error al copiar el mensaje');
+            const mensaje = document.getElementById('kick-output').textContent;
+            navigator.clipboard.writeText(mensaje).then(() => {
+                alert('Mensaje copiado al portapapeles.');
             });
         }
+
+        function mostrarResumen() {
+            const resumen = document.getElementById('resumen');
+            resumen.style.display = 'block';
+            const resumenTotal = totalGanancias - totalPerdidas;
+            document.getElementById('resumen-total').textContent = 'Ganancias Totales: ' + totalGanancias.toFixed(2) + ' | Pérdidas Totales: ' + totalPerdidas.toFixed(2) + ' | Resumen: ' + resumenTotal.toFixed(2);
+        }
     </script>
+    
 </body>
 </html>
